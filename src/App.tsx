@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Radio, X } from 'lucide-react';
 import CitizenPortal from './components/CitizenPortal';
-import CommandDashboard from './components/CommandDashboard';
 
 export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -32,14 +31,11 @@ export default function App() {
         </div>
       )}
 
-      {/* Main split-screen container */}
-      <main id="main-content" className="w-full h-full flex flex-col lg:flex-row items-center justify-center gap-6 p-4 md:p-6 lg:p-12 overflow-y-auto lg:overflow-hidden relative z-10 max-w-[1400px] mx-auto">
-        <div className="shrink-0 scale-95 lg:scale-100 transition-transform">
-          <CitizenPortal onShowToast={showNotificationToast} />
-        </div>
-        <div className="w-full lg:w-auto flex-1 flex justify-center scale-95 lg:scale-100 transition-transform">
-          <CommandDashboard onShowToast={showNotificationToast} />
-        </div>
+      {/* Centered Phone Simulator Container */}
+      <main id="main-content" className="w-full h-full md:w-auto md:h-auto flex items-center justify-center relative z-10">
+        <CitizenPortal
+          onShowToast={showNotificationToast}
+        />
       </main>
     </div>
   );
