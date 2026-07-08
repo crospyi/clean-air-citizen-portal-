@@ -50,6 +50,24 @@
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(148, 163, 184, 0.5);
   }
+
+  /* Shimmer / Scanning effect for AI analysis */
+  @keyframes scanline {
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 100%;
+    }
+  }
+  .animate-scan {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 60%;
+    background: linear-gradient(to right, transparent, rgba(139, 92, 246, 0.45), transparent);
+    animation: scanline 1.5s infinite linear;
+  }
 }
 
 /* Smartphone simulation styles */

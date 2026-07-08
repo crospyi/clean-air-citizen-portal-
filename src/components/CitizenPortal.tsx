@@ -169,6 +169,24 @@ const INDIAN_POLLUTION_CATEGORIES = [
   }
 ];
 
+const CATEGORY_STYLES: Record<string, { active: string; border: string }> = {
+  Trash: { active: 'border-violet-500 bg-violet-50/40 text-violet-700 shadow-sm shadow-violet-100', border: 'border-slate-200 hover:border-violet-300' },
+  Leaf: { active: 'border-emerald-500 bg-emerald-50/40 text-emerald-700 shadow-sm shadow-emerald-100', border: 'border-slate-200 hover:border-emerald-300' },
+  Factory: { active: 'border-rose-500 bg-rose-50/40 text-rose-700 shadow-sm shadow-rose-100', border: 'border-slate-200 hover:border-rose-300' },
+  Smoke: { active: 'border-amber-500 bg-amber-50/40 text-amber-700 shadow-sm shadow-amber-100', border: 'border-slate-200 hover:border-amber-300' },
+  Dust: { active: 'border-orange-500 bg-orange-50/40 text-orange-700 shadow-sm shadow-orange-100', border: 'border-slate-200 hover:border-orange-300' },
+  Vehicular: { active: 'border-indigo-500 bg-indigo-50/40 text-indigo-700 shadow-sm shadow-indigo-100', border: 'border-slate-200 hover:border-indigo-300' }
+};
+
+const ACCENT_CLASSES: Record<string, string> = {
+  Trash: 'accent-violet-500',
+  Leaf: 'accent-emerald-500',
+  Factory: 'accent-rose-500',
+  Smoke: 'accent-amber-500',
+  Dust: 'accent-orange-500',
+  Vehicular: 'accent-indigo-500'
+};
+
 const SIMULATED_CHATS = [
   {
     id: 'sim-1',
@@ -2434,6 +2452,79 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isCustomPhoto, setIsCustomPhoto] = useState<boolean>(false);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState<boolean>(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<{
+    confidence: number;
+    description: string;
+    suggestedAqiMod: number;
+    severity: 'Low' | 'Moderate' | 'High' | 'Severe';
+  } | null>(null);
+
+  // Gemini AI Vision Analysis Simulation
+  useEffect(() => {
+    if (selectedImage) {
+      setIsAiAnalyzing(true);
+      setAiAnalysisResult(null);
+
+      const timer = setTimeout(() => {
+        setIsAiAnalyzing(false);
+        
+        let confidence = 87 + Math.floor(Math.random() * 12);
+        let description = "";
+        let suggestedAqiMod = 35;
+        let severity: 'Low' | 'Moderate' | 'High' | 'Severe' = 'Moderate';
+
+        switch (selectedCategory) {
+          case 'Trash':
+            description = "AI detected open garbage burning. Visible plastic/rubber combustion products emitting toxic gases.";
+            suggestedAqiMod = 45;
+            severity = 'High';
+            break;
+          case 'Leaf':
+            description = "Leaf and organic biomass combustion detected. Moderate smoke density and carbon particulates.";
+            suggestedAqiMod = 25;
+            severity = 'Moderate';
+            break;
+          case 'Factory':
+            description = "Industrial smoke stack emission. Plume signature shows high opacity and sulfur/ash content.";
+            suggestedAqiMod = 80;
+            severity = 'Severe';
+            break;
+          case 'Smoke':
+            description = "Tandoor or street-side cook smoke. Localized biomass combustion with standard dispersion.";
+            suggestedAqiMod = 15;
+            severity = 'Low';
+            break;
+          case 'Dust':
+            description = "Fugitive construction dust suspension. Heavy PM10 load from excavation/demolition site.";
+            suggestedAqiMod = 35;
+            severity = 'Moderate';
+            break;
+          case 'Vehicular':
+            description = "Vehicular exhaust smoke plume. High diesel combustion signature detected from commercial transport.";
+            suggestedAqiMod = 30;
+            severity = 'High';
+            break;
+        }
+
+        setAiAnalysisResult({
+          confidence,
+          description,
+          suggestedAqiMod,
+          severity
+        });
+        
+        // Auto-fill values
+        setAqiMod(suggestedAqiMod);
+        setReportDescription(prev => prev.trim() ? prev : `[AI SOMA Alert: ${severity} Severity] ${description}`);
+      }, 1200);
+
+      return () => clearTimeout(timer);
+    } else {
+      setAiAnalysisResult(null);
+      setIsAiAnalyzing(false);
+    }
+  }, [selectedImage, selectedCategory]);
 
   // Camera & Geolocation API States
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
@@ -4154,9 +4245,10 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
                                 )}
                               </div>
                             ) : (
-                              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50 flex flex-col items-center justify-center space-y-4 text-center">
-                                <div className="w-12 h-12 rounded-full bg-sky-50 flex items-center justify-center border border-sky-100">
-                                  <Camera className="w-6 h-6 text-sky-600 animate-pulse" />
+                              <div className="border border-dashed border-slate-200/80 rounded-2xl p-6 bg-white flex flex-col items-center justify-center space-y-4 text-center shadow-sm">
+                                <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center shadow-sm shadow-sky-50 relative overflow-hidden shrink-0">
+                                  <div className="absolute inset-0 bg-gradient-to-br from-sky-400/20 to-indigo-400/20 animate-pulse"></div>
+                                  <Camera className="w-5.5 h-5.5 text-sky-600 relative z-10 animate-pulse" />
                                 </div>
                                 <div className="space-y-1">
                                   <h5 className="text-xs font-bold text-slate-700">Camera is Disconnected / Idle</h5>
@@ -4168,7 +4260,7 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
                                   <button
                                     type="button"
                                     onClick={startCamera}
-                                    className="w-full py-2 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold rounded-xl text-[10px] flex items-center justify-center gap-1 transition-all shadow-md cursor-pointer uppercase tracking-wider"
+                                    className="w-full py-2.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 active:scale-95 text-white font-bold rounded-xl text-[10px] flex items-center justify-center gap-1.5 transition-all shadow-md shadow-sky-100 cursor-pointer uppercase tracking-wider font-mono"
                                   >
                                     <Camera className="w-3.5 h-3.5" />
                                     <span>Start Live Camera</span>
@@ -4176,7 +4268,7 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
                                   <button
                                     type="button"
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="w-full py-2 bg-white hover:bg-slate-50 border border-slate-200 active:scale-95 text-slate-700 font-bold rounded-xl text-[10px] flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer uppercase tracking-wider"
+                                    className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200/80 active:scale-95 text-slate-700 font-bold rounded-xl text-[10px] flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer uppercase tracking-wider font-mono"
                                   >
                                     <Upload className="w-3.5 h-3.5 text-slate-500" />
                                     <span>Upload from Files</span>
@@ -4233,6 +4325,53 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
                       ) : (
                         /* STEP 2: Detail comment, category, coordinates etc */
                         <div className="space-y-4 animate-fadeIn">
+                          {/* Gemini AI Smart Verification Card */}
+                          {isAiAnalyzing && (
+                            <div className="bg-gradient-to-r from-violet-600/5 to-indigo-600/5 p-3 rounded-2xl border border-violet-500/20 shadow-sm space-y-2 text-left relative overflow-hidden">
+                              <div className="flex items-center gap-1.5 text-xs font-bold text-violet-700">
+                                <Sparkles className="w-4 h-4 text-violet-600 animate-spin-slow" />
+                                <span>Gemini Vision Node: Scanning Evidence...</span>
+                              </div>
+                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden relative">
+                                <div className="absolute top-0 bottom-0 bg-violet-600 rounded-full w-[40%] animate-scan"></div>
+                              </div>
+                            </div>
+                          )}
+
+                          {aiAnalysisResult && (
+                            <div className="bg-gradient-to-r from-violet-50/70 to-indigo-50/70 p-3.5 rounded-2xl border border-violet-200/60 shadow-sm space-y-2 text-left animate-fadeIn">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-violet-800 uppercase tracking-wider font-mono">
+                                  <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                                  <span>Gemini AI Assessment</span>
+                                </div>
+                                <span className="text-[9px] font-mono bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-bold">
+                                  {aiAnalysisResult.confidence}% Confidence
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-600 leading-normal font-sans">
+                                {aiAnalysisResult.description}
+                              </p>
+                              <div className="flex gap-2 items-center">
+                                <div className="flex-1 flex items-center justify-between bg-white px-2.5 py-1.5 rounded-xl border border-slate-100 text-[10px]">
+                                  <span className="text-slate-400 font-medium">Severity:</span>
+                                  <span className={`font-extrabold px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider ${
+                                    aiAnalysisResult.severity === 'Low' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                                    aiAnalysisResult.severity === 'Moderate' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                                    aiAnalysisResult.severity === 'High' ? 'bg-orange-50 text-orange-700 border border-orange-100' :
+                                    'bg-rose-50 text-rose-700 border border-rose-100 animate-pulse'
+                                  }`}>
+                                    {aiAnalysisResult.severity}
+                                  </span>
+                                </div>
+                                <div className="flex-1 flex items-center justify-between bg-white px-2.5 py-1.5 rounded-xl border border-slate-100 text-[10px]">
+                                  <span className="text-slate-400 font-medium">Suggested AQI:</span>
+                                  <span className="font-bold text-violet-700">+{aiAnalysisResult.suggestedAqiMod}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Image preview with reset/change trigger */}
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-wide flex items-center justify-between">
@@ -4275,21 +4414,23 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
                               🔥 Choose Hazard Tag Type
                             </label>
                             <div className="grid grid-cols-2 gap-2">
-                              {INDIAN_POLLUTION_CATEGORIES.map((cat) => (
-                                <button
-                                  key={cat.id}
-                                  type="button"
-                                  onClick={() => handleCategoryChange(cat.id as IndianCategoryType)}
-                                  className={`flex items-center gap-1.5 p-2 bg-white rounded-xl border text-[11px] font-bold transition-all ${
-                                    selectedCategory === cat.id
-                                      ? 'border-sky-500 bg-sky-50/50 text-sky-700 shadow-sm shadow-sky-100'
-                                      : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                                  }`}
-                                >
-                                  <span className="text-base">{cat.emoji}</span>
-                                  <span className="truncate leading-none">{cat.nameEn}</span>
-                                </button>
-                              ))}
+                              {INDIAN_POLLUTION_CATEGORIES.map((cat) => {
+                                const isSelected = selectedCategory === cat.id;
+                                const style = CATEGORY_STYLES[cat.id] || { active: 'border-sky-500 bg-sky-50/50 text-sky-700', border: 'border-slate-200' };
+                                return (
+                                  <button
+                                    key={cat.id}
+                                    type="button"
+                                    onClick={() => handleCategoryChange(cat.id as IndianCategoryType)}
+                                    className={`flex items-center gap-1.5 p-2 bg-white rounded-xl border text-[11px] font-bold transition-all cursor-pointer active:scale-95 ${
+                                      isSelected ? style.active : style.border
+                                    } text-slate-600`}
+                                  >
+                                    <span className="text-base">{cat.emoji}</span>
+                                    <span className="truncate leading-none">{cat.nameEn}</span>
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
 
@@ -4330,7 +4471,7 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
                                 max="200"
                                 value={aqiMod}
                                 onChange={(e) => setAqiMod(parseInt(e.target.value))}
-                                className="flex-1 accent-sky-500 h-1 bg-slate-100 rounded-lg appearance-none"
+                                className={`flex-1 h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer ${ACCENT_CLASSES[selectedCategory] || 'accent-sky-500'}`}
                               />
                               <span className="text-[10px] font-mono text-slate-400">High</span>
                             </div>
