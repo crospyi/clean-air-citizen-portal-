@@ -1,20 +1,39 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Clean Air Citizen Portal
 
-# Run and deploy your AI Studio app
+A modern React web application for citizen engagement, air quality reporting, and community discussions. It empowers citizens to track local environmental conditions, report hazards, log daily eco-friendly activities, and participate in localized discussion forums.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/89db7b99-9f46-421e-912c-70939736908d
+- **Air Quality reporting**: Submit reports about local pollution hazards, classify them by category and severity, and upvote/downvote reports.
+- **Eco Check-ins**: Log daily green attendance and build eco-friendly habits.
+- **State & City Communities**: Localized chatrooms for discussions, announcements, and sharing initiatives.
+- **AI Integration**: Powered by Gemini for smart assessments and suggestions.
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+### Prerequisites
+- Node.js (v18 or higher recommended)
 
+### Setup & Installation
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Configure Environment Variables**:
+   Create a `.env.local` file in the root directory (based on [.env.example](.env.example)) and configure your API keys:
+   ```env
+   GEMINI_API_KEY="your-gemini-api-key"
+   ```
+
+3. **Start the Development Server**:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
+
+4. **Build for Production**:
+   ```bash
+   npm run build
+   ```
