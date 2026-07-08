@@ -47,6 +47,8 @@ interface ReportData {
   createdAt: string;
   verified: boolean;
   votesCount?: number;
+  lat?: number;
+  lon?: number;
 }
 
 export default function CommandDashboard({ onShowToast }: CommandDashboardProps) {
@@ -266,9 +268,20 @@ export default function CommandDashboard({ onShowToast }: CommandDashboardProps)
                       <span className="text-base leading-none">{getEmoji(report.category)}</span>
                       <div>
                         <h4 className="text-[11px] font-extrabold text-slate-200">{report.category}</h4>
-                        <p className="text-[9px] font-mono text-slate-500 flex items-center gap-0.5">
-                          <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" />
-                          {report.city}, {report.state}
+                        <p className="text-[9.5px] font-mono text-slate-400 flex items-center gap-1.5 flex-wrap">
+                          <MapPin className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                          <span>{report.city}, {report.state}</span>
+                          {report.lat && report.lon && (
+                            <a 
+                              href={`https://www.google.com/maps/search/?api=1&query=${report.lat},${report.lon}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sky-400 hover:underline hover:text-sky-300 font-bold flex items-center gap-0.5 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700 font-mono text-[7.5px]"
+                              title="Open exact GPS coords on Google Maps"
+                            >
+                              📍 {report.lat.toFixed(4)}, {report.lon.toFixed(4)}
+                            </a>
+                          )}
                         </p>
                       </div>
                     </div>
