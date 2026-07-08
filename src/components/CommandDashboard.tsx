@@ -80,6 +80,8 @@ export default function CommandDashboard({ onShowToast }: CommandDashboardProps)
   const handleVerify = async (reportId: string, submitterId: string) => {
     try {
       const reportDocRef = doc(db, 'reports', reportId);
+      const reportSnap = await getDoc(reportDocRef);
+
       await updateDoc(reportDocRef, {
         verified: true
       });
@@ -95,6 +97,27 @@ export default function CommandDashboard({ onShowToast }: CommandDashboardProps)
         }
       }
 
+      // Notify community about the government verification action
+      if (reportSnap.exists()) {
+        const reportData = reportSnap.data();
+        const notificationText = `🏛️ [OFFICIAL DISPATCH] CPCB Command verified the hazard report submitted by @${reportData.senderName} (${reportData.category} in ${reportData.city}). Dispatch team deployed to coordinate mitigation.`;
+        
+        const alertId = `adv-${Date.now()}`;
+        await setDoc(doc(collection(db, 'community_messages'), alertId), {
+          id: alertId,
+          communityId: 'municipal_updates',
+          senderName: 'CPCB Command',
+          senderId: 'cpcb_official_broadcast',
+          state: reportData.state,
+          city: reportData.city,
+          text: notificationText,
+          timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          avatar: '🏛️',
+          createdAt: Date.now(),
+          isUser: false
+        });
+      }
+
       onShowToast("✅ Report officially verified! Submitter rewarded +100 points.");
     } catch (err) {
       console.error("Failed to verify report:", err);
@@ -106,7 +129,32 @@ export default function CommandDashboard({ onShowToast }: CommandDashboardProps)
   const handleDelete = async (reportId: string) => {
     if (!window.confirm("Are you sure you want to dismiss and delete this hazard report?")) return;
     try {
-      await deleteDoc(doc(db, 'reports', reportId));
+      const reportDocRef = doc(db, 'reports', reportId);
+      const reportSnap = await getDoc(reportDocRef);
+      
+      await deleteDoc(reportDocRef);
+
+      // Notify community about the government dismiss action
+      if (reportSnap.exists()) {
+        const reportData = reportSnap.data();
+        const notificationText = `🏛️ [OFFICIAL NOTICE] CPCB Command reviewed and dismissed the report submitted by @${reportData.senderName} in ${reportData.city} due to lack of confirmation or false evidence.`;
+        
+        const alertId = `adv-${Date.now()}`;
+        await setDoc(doc(collection(db, 'community_messages'), alertId), {
+          id: alertId,
+          communityId: 'municipal_updates',
+          senderName: 'CPCB Command',
+          senderId: 'cpcb_official_broadcast',
+          state: reportData.state,
+          city: reportData.city,
+          text: notificationText,
+          timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          avatar: '🏛️',
+          createdAt: Date.now(),
+          isUser: false
+        });
+      }
+
       onShowToast("🗑️ Hazard report dismissed and deleted.");
     } catch (err) {
       console.error("Failed to delete report:", err);
@@ -125,7 +173,7 @@ export default function CommandDashboard({ onShowToast }: CommandDashboardProps)
 
     const broadcastData = {
       id: alertId,
-      communityId: 'municipal_general',
+      communityId: 'municipal_updates',
       senderName: 'CPCB Official',
       senderId: 'cpcb_official_broadcast',
       state: 'Delhi NCR',
@@ -138,7 +186,7 @@ export default function CommandDashboard({ onShowToast }: CommandDashboardProps)
     };
 
     try {
-      await setDoc(doc(collection(db, 'community_messages')), broadcastData);
+      await setDoc(doc(collection(db, 'community_messages'), alertId), broadcastData);
       setBroadcastText('');
       onShowToast("📢 Official Broadcast advisory sent to all community channels!");
     } catch (err) {
