@@ -4443,6 +4443,16 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
                             </div>
                           </div>
 
+                          {/* Publish / Submit Trigger */}
+                          <button
+                            type="button"
+                            onClick={handlePublishReport}
+                            className="w-full py-3 bg-sky-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-sky-200 hover:bg-sky-700 transition-colors cursor-pointer active:scale-95 shrink-0 uppercase tracking-wider"
+                          >
+                            <Sparkles className="w-4 h-4 text-white shrink-0 animate-pulse" />
+                            <span>BROADCAST TO COMMUNITY</span>
+                          </button>
+
                           {/* Pollution Category Select */}
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-wide">
@@ -4525,16 +4535,6 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
                               className="w-full p-2.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-700 shadow-sm"
                             ></textarea>
                           </div>
-
-                          {/* Publish / Submit Trigger */}
-                          <button
-                            type="button"
-                            onClick={handlePublishReport}
-                            className="w-full py-3 bg-sky-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-sky-200 hover:bg-sky-700 transition-colors cursor-pointer active:scale-95 shrink-0 uppercase tracking-wider"
-                          >
-                            <Sparkles className="w-4 h-4 text-white shrink-0 animate-pulse" />
-                            <span>BROADCAST TO COMMUNITY</span>
-                          </button>
                         </div>
                       )}
 
