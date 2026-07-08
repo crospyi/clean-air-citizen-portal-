@@ -5757,6 +5757,39 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
                         </p>
                       </div>
 
+                      {/* About this App Card */}
+                      <div className="bg-gradient-to-br from-sky-500/5 to-indigo-500/5 p-4 rounded-2xl border border-sky-100 shadow-sm space-y-2.5 text-left">
+                        <div className="flex justify-between items-center border-b border-sky-100 pb-1.5">
+                          <span className="text-[9.5px] font-extrabold font-mono text-sky-800 uppercase tracking-wide flex items-center gap-1">
+                            ℹ️ About CleanAir Nexus
+                          </span>
+                          <span className="text-[8px] font-mono text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100 font-bold">
+                            Eco Project
+                          </span>
+                        </div>
+                        <p className="text-[9.5px] text-slate-700 leading-normal font-sans">
+                          <strong>CleanAir Nexus</strong> is a decentralized, citizen-centric air quality monitoring platform designed to connect local communities with municipal authorities. By fusing crowdsourced hazard snaps with CPCB CAAQMS sensor telemetry and Copernicus satellite analysis, it builds a transparent, real-time pollution grid.
+                        </p>
+                        <div className="space-y-1.5 pt-1 text-[8.5px] text-slate-500 font-sans">
+                          <div className="flex gap-1.5 items-start">
+                            <span className="shrink-0 text-sky-500">✔</span>
+                            <span><strong>P2P SOMA Audits</strong>: Peer-to-peer verification of particulate anomalies.</span>
+                          </div>
+                          <div className="flex gap-1.5 items-start">
+                            <span className="shrink-0 text-sky-500">✔</span>
+                            <span><strong>CPCB Command Intake</strong>: Forwards real GPS hazards to the government for dispatch.</span>
+                          </div>
+                          <div className="flex gap-1.5 items-start">
+                            <span className="shrink-0 text-sky-500">✔</span>
+                            <span><strong>GRAP Action Protocol</strong>: Auto-broadcasts official air safety alerts.</span>
+                          </div>
+                          <div className="flex gap-1.5 items-start">
+                            <span className="shrink-0 text-sky-500">✔</span>
+                            <span><strong>Gamified Impact</strong>: Earn ranks and rewards for logging daily check-ins.</span>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Danger Zone: Reset Data */}
                       <div className="bg-red-50/50 p-3 rounded-2xl border border-red-200/60 shadow-sm space-y-2 text-left">
                         <span className="text-[9.5px] font-bold font-mono text-red-500 uppercase tracking-wide block">
