@@ -2851,6 +2851,25 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
     if (!file) return;
 
     setUploadProgress(20);
+
+    // Fetch real GPS coordinates concurrently when uploading a photo
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setGeolocationCoords({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          });
+          setUsingRealGps(true);
+          onShowToast("🎯 Photo tagged with real GPS coordinates!");
+        },
+        (error) => {
+          console.warn("Failed to get geolocation for upload, using defaults", error);
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    }
+
     const reader = new FileReader();
 
     const interval = setInterval(() => {
@@ -3160,7 +3179,9 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
           avatar: data.verified ? '✅' : '🚨',
           imageUrl: data.imageUrl,
           category: data.category,
-          aqi: data.aqi
+          aqi: data.aqi,
+          lat: data.lat,
+          lon: data.lon
         });
 
         // Collect pending reviews for other local reports
@@ -3488,7 +3509,9 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
       votesCount: 0,
       votesUsers: [],
       spamCount: 0,
-      spamUsers: []
+      spamUsers: [],
+      lat: geolocationCoords ? geolocationCoords.lat : selectedCityCoords.lat,
+      lon: geolocationCoords ? geolocationCoords.lon : selectedCityCoords.lon
     };
 
     try {

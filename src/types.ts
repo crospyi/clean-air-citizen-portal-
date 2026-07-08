@@ -27,6 +27,8 @@ export interface CitizenReport {
   citizenName: string;
   userId: string;
   status: 'Pending' | 'Dispatched' | 'Resolved';
+  lat?: number;
+  lon?: number;
 }
 
 export interface CommunityMessage {
