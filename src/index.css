@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Roboto', sans-serif;
+}
+
 @layer utilities {
   /* Dark Leaflet Theme */
   .dark-leaflet .leaflet-tile {
