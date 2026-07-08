@@ -12,7 +12,7 @@ export default function App() {
   };
 
   return (
-    <div className="w-screen h-screen bg-slate-950 text-slate-100 flex items-center justify-center font-sans antialiased selection:bg-sky-500/30 selection:text-white overflow-hidden relative">
+    <div className="w-screen h-dvh bg-slate-950 text-slate-100 flex items-center justify-center font-sans antialiased selection:bg-sky-500/30 selection:text-white overflow-hidden relative">
       
       {/* Background radial glow & grid patterns */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#020617_1px,transparent_1px),linear-gradient(to_bottom,#020617_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none opacity-40"></div>

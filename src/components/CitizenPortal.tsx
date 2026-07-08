@@ -3560,26 +3560,7 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
         </div>
 
         {/* Smartphone Screen Viewport */}
-        <div className="flex-1 bg-slate-50 md:rounded-[38px] rounded-none overflow-hidden flex flex-col relative text-slate-800">
-
-          
-          {/* Status Bar */}
-          <div className="h-10 bg-slate-100 flex justify-between items-center px-6 text-[10px] font-mono text-slate-600 font-bold shrink-0 pt-2 border-b border-slate-200/50">
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3 h-3 text-slate-500" />
-              <span>10:52 AM</span>
-            </div>
-            <div className="text-[9px] text-sky-600 tracking-tight flex items-center gap-1">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full inline-block animate-pulse"></span>
-              Airtel 5G Plus
-            </div>
-            <div className="flex items-center gap-1">
-              <span>96%</span>
-              <div className="w-5 h-2.5 border border-slate-400 rounded-sm p-0.5 flex items-center">
-                <div className="w-full h-full bg-slate-600 rounded-[1px]"></div>
-              </div>
-            </div>
-          </div>
+        <div className="flex-1 bg-slate-50 md:rounded-[38px] rounded-none overflow-hidden flex flex-col relative text-slate-800 md:pt-4">
 
           {/* Conditional Rendering: Onboarding or Logged In Application */}
           <AnimatePresence mode="wait">
