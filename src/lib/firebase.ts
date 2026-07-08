@@ -3,12 +3,12 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBjhYMlKjdVuCYHyhGy-6ZenO2znadXqhE",
-  authDomain: "seismic-inverter-6gtt6.firebaseapp.com",
-  projectId: "seismic-inverter-6gtt6",
-  storageBucket: "seismic-inverter-6gtt6.firebasestorage.app",
-  messagingSenderId: "687659979685",
-  appId: "1:687659979685:web:6c800d4d4f80d4b16d8e4c"
+  apiKey: "AIzaSyA4PS37KyyCaKL2_xBErQtes3JxliTKTI8",
+  authDomain: "clean-air-citizen.firebaseapp.com",
+  projectId: "clean-air-citizen",
+  storageBucket: "clean-air-citizen.firebasestorage.app",
+  messagingSenderId: "86383947075",
+  appId: "1:86383947075:web:dde662221dd6b3865f93f6"
 };
 
 // Initialize App
@@ -23,5 +23,5 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
-// Initialize Firestore with custom databaseId
-export const db = getFirestore(app, "ai-studio-cleanaircitizenp-89db7b99-9f46-421e-912c-70939736908d");
+// Initialize Firestore
+export const db = getFirestore(app);
