@@ -7,6 +7,7 @@ import {
   MapPin,
   Send,
   ArrowRight,
+  ArrowLeft,
   LogOut,
   Compass,
   AlertTriangle,
@@ -2799,6 +2800,7 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
 
   // Multi-Community State & Real-time Sync
   const [activeCommunityId, setActiveCommunityId] = useState<string>('municipal_updates');
+  const [showChatWindow, setShowChatWindow] = useState<boolean>(false);
   const [customCommunities, setCustomCommunities] = useState<Community[]>([]);
   const [joinedCommunityIds, setJoinedCommunityIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('cleanair_joined_communities');
@@ -3265,6 +3267,7 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
       await setDoc(doc(db, 'communities', customId), newComm);
       setJoinedCommunityIds((prev) => [...prev, customId]);
       setActiveCommunityId(customId);
+      setShowChatWindow(true);
       setNewCommunityName('');
       setNewCommunityDesc('');
       setShowCreateCommunity(false);
@@ -3273,6 +3276,39 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
     } catch (err) {
       console.error("Firestore create community failed:", err);
       onShowToast("⚠️ Failed to create community in Firestore.");
+    }
+  };
+
+  // Delete Custom Community Handler
+  const handleDeleteCommunity = async (communityId: string, communityName: string) => {
+    if (!fbUser) return;
+    const confirmDelete = window.confirm(`Are you sure you want to delete the community "${communityName}"? This action cannot be undone.`);
+    if (!confirmDelete) return;
+
+    try {
+      // 1. Delete community document from Firestore
+      await deleteDoc(doc(db, 'communities', communityId));
+      
+      // 2. Remove from local joined list
+      setJoinedCommunityIds((prev) => prev.filter(id => id !== communityId));
+      
+      // 3. Reset active state if we deleted the current active community
+      if (activeCommunityId === communityId) {
+        setActiveCommunityId('municipal_updates');
+        setShowChatWindow(false);
+      }
+      
+      // 4. Cascade delete all messages belonging to this community
+      const msgQuery = query(collection(db, 'community_messages'), where('communityId', '==', communityId));
+      const msgSnap = await getDocs(msgQuery);
+      const deletePromises = msgSnap.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+
+      onShowToast(`🗑️ Community "${communityName}" deleted successfully.`);
+      playAudioFeedback(300, 0.15, 'sine');
+    } catch (err) {
+      console.error("Firestore delete community failed:", err);
+      onShowToast("⚠️ Failed to delete community in Firestore.");
     }
   };
 
@@ -4380,365 +4416,335 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="flex-1 flex flex-col md:flex-row h-[420px] overflow-hidden bg-slate-50/30 font-sans"
+                        className="flex-1 flex flex-col h-[420px] overflow-hidden bg-slate-50/30 font-sans"
                       >
-                        {/* LEFT SIDEBAR: COMMUNITIES LIST (Desktop Only) */}
-                        <div className="hidden md:flex w-[240px] border-r border-slate-200/60 bg-white flex-col shrink-0 overflow-hidden">
-                          {/* Search and Header */}
-                          <div className="p-3 border-b border-slate-100 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                                🌐 Channels
-                              </span>
-                              <span className="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded-full font-mono">
-                                {availableCommunities.length}
-                              </span>
-                            </div>
-                            <input
-                              type="text"
-                              value={communitySearchQuery}
-                              onChange={(e) => setCommunitySearchQuery(e.target.value)}
-                              placeholder="Search channels..."
-                              className="w-full text-[11px] bg-slate-50 border border-slate-200/80 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white text-slate-700 font-sans shadow-inner"
-                            />
-                          </div>
-
-                          {/* Communities Scrollable List */}
-                          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                            {filteredCommunities.map((comm) => {
-                              const isSelected = comm.id === activeCommunityId;
-                              const isJoined = joinedCommunityIds.includes(comm.id) || 
-                                               comm.type === 'municipal' || 
-                                               comm.type === 'state' || 
-                                               comm.type === 'city';
-
-                              return (
-                                <button
-                                  key={comm.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveCommunityId(comm.id);
-                                    playAudioFeedback(400, 0.05, 'sine');
-                                  }}
-                                  className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-all relative ${
-                                    isSelected 
-                                      ? 'bg-sky-50 border-l-4 border-sky-500 text-slate-800' 
-                                      : 'hover:bg-slate-50 text-slate-600'
-                                  }`}
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between gap-1">
-                                      <h5 className="text-[11px] font-bold truncate leading-tight">
-                                        {comm.name}
-                                      </h5>
-                                      {comm.type === 'municipal' && (
-                                        <span className="text-[8px] bg-amber-50 text-amber-700 font-bold px-1 py-0.2 rounded shrink-0">
-                                          Official
-                                        </span>
-                                      )}
-                                    </div>
-                                    <p className="text-[9px] text-slate-400 truncate mt-0.5 leading-normal">
-                                      {comm.description}
-                                    </p>
-                                  </div>
-
-                                  {/* Join/Leave button for custom ones */}
-                                  {comm.type === 'custom' && (
-                                    <div className="shrink-0 pt-0.5">
-                                      {isJoined ? (
-                                        <button
-                                          type="button"
-                                          title="Leave Group"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setJoinedCommunityIds(prev => prev.filter(id => id !== comm.id));
-                                            if (activeCommunityId === comm.id) {
-                                              setActiveCommunityId('municipal_updates');
-                                            }
-                                            onShowToast(`Left "${comm.name}"`);
-                                            playAudioFeedback(350, 0.08, 'sine');
-                                          }}
-                                          className="text-[10px] text-slate-300 hover:text-rose-500 p-0.5 transition-colors"
-                                        >
-                                          ✕
-                                        </button>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setJoinedCommunityIds(prev => [...prev, comm.id]);
-                                            onShowToast(`Joined "${comm.name}"!`);
-                                            playAudioFeedback(600, 0.08, 'sine');
-                                          }}
-                                          className="text-[9px] text-sky-600 hover:bg-sky-100 font-extrabold px-1.5 py-0.5 rounded-md border border-sky-200"
-                                        >
-                                          + Join
-                                        </button>
-                                      )}
-                                    </div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Bottom Action: Create Community Group */}
-                          <div className="p-3 border-t border-slate-100 bg-slate-50/60 space-y-2">
-                            {showCreateCommunity ? (
-                              <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 space-y-2 shadow-sm">
-                                <div className="text-[9px] font-bold text-sky-800 uppercase tracking-wider font-mono">
-                                  🌱 Create Channel
-                                </div>
-                                <input
-                                  type="text"
-                                  placeholder="Name (e.g. Dwarka Cleanups)"
-                                  value={newCommunityName}
-                                  onChange={(e) => setNewCommunityName(e.target.value)}
-                                  className="w-full text-[11px] border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-sky-500 font-sans"
-                                />
-                                <input
-                                  type="text"
-                                  placeholder="Description..."
-                                  value={newCommunityDesc}
-                                  onChange={(e) => setNewCommunityDesc(e.target.value)}
-                                  className="w-full text-[10px] border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-sky-500 font-sans"
-                                />
-                                <div className="flex gap-1 justify-end pt-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => setShowCreateCommunity(false)}
-                                    className="px-2 py-0.5 text-[9px] font-bold text-slate-400 hover:text-slate-600 bg-slate-50 rounded"
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={handleCreateCommunity}
-                                    className="px-2.5 py-0.5 text-[9px] font-bold text-white bg-sky-600 hover:bg-sky-700 rounded shadow-sm"
-                                  >
-                                    Create
-                                  </button>
-                                </div>
+                        {!showChatWindow ? (
+                          /* SIDEBAR: COMMUNITIES LIST */
+                          <div className="flex w-full bg-white flex-col overflow-hidden h-full">
+                            {/* Search and Header */}
+                            <div className="p-3 border-b border-slate-100 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                                  🌐 Channels
+                                </span>
+                                <span className="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded-full font-mono">
+                                  {availableCommunities.length}
+                                </span>
                               </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setShowCreateCommunity(true);
-                                  playAudioFeedback(450, 0.05, 'sine');
-                                }}
-                                className="w-full text-[10px] font-bold py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg flex items-center justify-center gap-1 transition-colors shadow-md shadow-sky-100"
-                              >
-                                <span>➕ Create Community</span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* HORIZONTAL SWIPER: COMMUNITIES (Mobile Only) */}
-                        <div className="flex md:hidden flex-col p-2 bg-white border-b border-slate-200 shrink-0">
-                          <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-100">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                              💬 Localized Forums
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowCreateCommunity(!showCreateCommunity);
-                                playAudioFeedback(450, 0.05, 'sine');
-                              }}
-                              className="text-[9px] font-bold text-sky-600 flex items-center gap-0.5"
-                            >
-                              {showCreateCommunity ? "✕ Close" : "➕ Create"}
-                            </button>
-                          </div>
-
-                          {/* Mobile inline group creation form */}
-                          {showCreateCommunity && (
-                            <div className="mb-2 p-2 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5">
                               <input
                                 type="text"
-                                placeholder="Channel Name..."
-                                value={newCommunityName}
-                                onChange={(e) => setNewCommunityName(e.target.value)}
-                                className="w-full text-[10px] border border-slate-200 rounded-md px-2 py-1 bg-white focus:outline-none"
+                                value={communitySearchQuery}
+                                onChange={(e) => setCommunitySearchQuery(e.target.value)}
+                                placeholder="Search channels..."
+                                className="w-full text-[11px] bg-slate-50 border border-slate-200/80 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white text-slate-700 font-sans shadow-inner"
                               />
-                              <input
-                                type="text"
-                                placeholder="Description..."
-                                value={newCommunityDesc}
-                                onChange={(e) => setNewCommunityDesc(e.target.value)}
-                                className="w-full text-[9px] border border-slate-200 rounded-md px-2 py-1 bg-white focus:outline-none"
-                              />
-                              <button
-                                type="button"
-                                onClick={handleCreateCommunity}
-                                className="w-full text-[9px] font-bold py-1 bg-sky-600 hover:bg-sky-700 text-white rounded"
-                              >
-                                Create & Join
-                              </button>
                             </div>
-                          )}
 
-                          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                            {availableCommunities.map((comm) => {
-                              const isSelected = comm.id === activeCommunityId;
-                              const isJoined = joinedCommunityIds.includes(comm.id) || 
-                                               comm.type === 'municipal' || 
-                                               comm.type === 'state' || 
-                                               comm.type === 'city';
+                            {/* Communities Scrollable List */}
+                            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                              {filteredCommunities.map((comm) => {
+                                const isSelected = comm.id === activeCommunityId;
+                                const isJoined = joinedCommunityIds.includes(comm.id) || 
+                                                 comm.type === 'municipal' || 
+                                                 comm.type === 'state' || 
+                                                 comm.type === 'city';
 
-                              return (
+                                return (
+                                  <div
+                                    key={comm.id}
+                                    onClick={() => {
+                                      setActiveCommunityId(comm.id);
+                                      setShowChatWindow(true);
+                                      playAudioFeedback(400, 0.05, 'sine');
+                                    }}
+                                    className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-all relative cursor-pointer ${
+                                      isSelected 
+                                        ? 'bg-sky-50 border-l-4 border-sky-500 text-slate-800' 
+                                        : 'hover:bg-slate-50 text-slate-600'
+                                    }`}
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center justify-between gap-1">
+                                        <h5 className="text-[11px] font-bold truncate leading-tight">
+                                          {comm.name}
+                                        </h5>
+                                        {comm.type === 'municipal' && (
+                                          <span className="text-[8px] bg-amber-50 text-amber-700 font-bold px-1 py-0.2 rounded shrink-0">
+                                            Official
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-[9px] text-slate-400 truncate mt-0.5 leading-normal">
+                                        {comm.description}
+                                      </p>
+                                    </div>
+
+                                    {/* Join/Leave button for custom ones */}
+                                    <div className="shrink-0 pt-0.5 flex items-center gap-1.5">
+                                      {comm.type === 'custom' && (
+                                        <>
+                                          {isJoined ? (
+                                            <button
+                                              type="button"
+                                              title="Leave Group"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setJoinedCommunityIds(prev => prev.filter(id => id !== comm.id));
+                                                if (activeCommunityId === comm.id) {
+                                                  setActiveCommunityId('municipal_updates');
+                                                }
+                                                onShowToast(`Left "${comm.name}"`);
+                                                playAudioFeedback(350, 0.08, 'sine');
+                                              }}
+                                              className="text-[10px] text-slate-300 hover:text-rose-500 p-0.5 transition-colors"
+                                            >
+                                              ✕
+                                            </button>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setJoinedCommunityIds(prev => [...prev, comm.id]);
+                                                onShowToast(`Joined "${comm.name}"!`);
+                                                playAudioFeedback(600, 0.08, 'sine');
+                                              }}
+                                              className="text-[9px] text-sky-600 hover:bg-sky-100 font-extrabold px-1.5 py-0.5 rounded-md border border-sky-200"
+                                            >
+                                              + Join
+                                            </button>
+                                          )}
+
+                                          {comm.createdBy === fbUser?.uid && (
+                                            <button
+                                              type="button"
+                                              title="Delete Community"
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                await handleDeleteCommunity(comm.id, comm.name);
+                                              }}
+                                              className="text-slate-300 hover:text-rose-600 p-0.5 transition-colors"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Bottom Action: Create Community Group */}
+                            <div className="p-3 border-t border-slate-100 bg-slate-50/60 space-y-2">
+                              {showCreateCommunity ? (
+                                <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 space-y-2 shadow-sm">
+                                  <div className="text-[9px] font-bold text-sky-800 uppercase tracking-wider font-mono">
+                                    🌱 Create Channel
+                                  </div>
+                                  <input
+                                    type="text"
+                                    placeholder="Name (e.g. Dwarka Cleanups)"
+                                    value={newCommunityName}
+                                    onChange={(e) => setNewCommunityName(e.target.value)}
+                                    className="w-full text-[11px] border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-sky-500 font-sans"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="Description..."
+                                    value={newCommunityDesc}
+                                    onChange={(e) => setNewCommunityDesc(e.target.value)}
+                                    className="w-full text-[10px] border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-sky-500 font-sans"
+                                  />
+                                  <div className="flex gap-1 justify-end pt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowCreateCommunity(false)}
+                                      className="px-2 py-0.5 text-[9px] font-bold text-slate-400 hover:text-slate-600 bg-slate-50 rounded"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={handleCreateCommunity}
+                                      className="px-2.5 py-0.5 text-[9px] font-bold text-white bg-sky-600 hover:bg-sky-700 rounded shadow-sm"
+                                    >
+                                      Create
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
                                 <button
-                                  key={comm.id}
                                   type="button"
                                   onClick={() => {
-                                    setActiveCommunityId(comm.id);
-                                    playAudioFeedback(400, 0.05, 'sine');
+                                    setShowCreateCommunity(true);
+                                    playAudioFeedback(450, 0.05, 'sine');
                                   }}
-                                  className={`px-3 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0 transition-all ${
-                                    isSelected
-                                      ? 'bg-sky-600 text-white shadow-sm'
-                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                  }`}
+                                  className="w-full text-[10px] font-bold py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg flex items-center justify-center gap-1 transition-colors shadow-md shadow-sky-100"
                                 >
-                                  {comm.name.split(' ')[0]} {comm.name.substring(comm.name.indexOf(' ') + 1)}
-                                  {comm.type === 'custom' && !isJoined && " (+ Join)"}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* RIGHT SIDE: CHAT FEED WINDOW */}
-                        <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50">
-                          {/* Chat Window Header */}
-                          <div className="px-4 py-2.5 bg-white border-b border-slate-200/80 flex flex-col justify-center shrink-0">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-xs font-bold text-slate-800 leading-tight flex items-center gap-1.5">
-                                {activeComm.name}
-                              </h4>
-                              {!isActiveCommJoined && activeComm.type === 'custom' && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setJoinedCommunityIds(prev => [...prev, activeComm.id]);
-                                    onShowToast(`Joined "${activeComm.name}"!`);
-                                    playAudioFeedback(600, 0.08, 'sine');
-                                  }}
-                                  className="text-[9px] font-bold text-white bg-sky-600 hover:bg-sky-700 px-2.5 py-1 rounded-full transition-colors"
-                                >
-                                  Join Channel
+                                  <span>➕ Create Community</span>
                                 </button>
                               )}
                             </div>
-                            <p className="text-[9.5px] text-slate-400 mt-0.5 truncate leading-normal">
-                              {activeComm.description}
-                            </p>
                           </div>
-
-                          {/* Messages Scroll Area */}
-                          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 min-h-0">
-                            {/* Encryption/Sync banner */}
-                            <div className="text-center py-1.5 text-[9px] text-slate-400 font-mono tracking-wide border-b border-slate-100 mb-2 flex items-center justify-center gap-1">
-                              <span>🔒</span>
-                              <span>Real-time citizen ledger synced securely via CleanAir SOMA node</span>
-                            </div>
-
-                            {activeCommunityMessages.map((msg) => (
-                              <div
-                                key={msg.id}
-                                className={`flex flex-col max-w-[85%] ${
-                                  msg.isUser ? 'ml-auto items-end' : 'mr-auto items-start'
-                                }`}
-                              >
-                                {/* Sender Info label */}
-                                {!msg.isUser && (
-                                  <span className="text-[9px] font-mono text-slate-400 font-semibold mb-0.5 ml-1 flex items-center gap-1">
-                                    <span>{msg.avatar}</span>
-                                    <span>{msg.senderName}</span>
-                                    {msg.city && <span className="opacity-60">({msg.city})</span>}
-                                  </span>
-                                )}
-
-                                {/* Text Message Bubble */}
-                                <div
-                                  className={`rounded-2xl px-3 py-2 text-xs shadow-sm ${
-                                    msg.isUser
-                                      ? 'bg-sky-600 text-white rounded-tr-none'
-                                      : 'bg-white text-slate-800 rounded-tl-none border border-slate-200/60'
-                                  }`}
-                                >
-                                  {/* Render attachments if they exist */}
-                                  {msg.imageUrl && (
-                                    <div className="rounded-lg overflow-hidden mb-2 border border-black/10 max-w-[190px] aspect-video">
-                                      <img
-                                        src={msg.imageUrl}
-                                        alt="Evidence"
-                                        className="w-full h-full object-cover"
-                                        referrerPolicy="no-referrer"
-                                      />
-                                    </div>
+                        ) : (
+                          /* RIGHT SIDE: CHAT FEED WINDOW */
+                          <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 w-full">
+                            {/* Chat Window Header */}
+                            <div className="px-4 py-2.5 bg-white border-b border-slate-200/80 flex flex-col justify-center shrink-0">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center min-w-0">
+                                  {/* Back to Channels button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setShowChatWindow(false);
+                                      playAudioFeedback(300, 0.05, 'sine');
+                                    }}
+                                    className="mr-2 p-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-500 transition-colors flex items-center justify-center cursor-pointer shrink-0"
+                                  >
+                                    <ArrowLeft className="w-3.5 h-3.5" />
+                                  </button>
+                                  <h4 className="text-xs font-bold text-slate-800 leading-tight flex items-center gap-1.5 truncate">
+                                    {activeComm.name}
+                                  </h4>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {activeComm.type === 'custom' && activeComm.createdBy === fbUser?.uid && (
+                                    <button
+                                      type="button"
+                                      title="Delete Community"
+                                      onClick={async () => {
+                                        await handleDeleteCommunity(activeComm.id, activeComm.name);
+                                      }}
+                                      className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg border border-slate-150 hover:bg-rose-50 transition-colors cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
                                   )}
-
-                                  <p className="leading-relaxed leading-tight text-[11px] break-words">
-                                    {msg.text}
-                                  </p>
-
-                                  <div className="flex items-center justify-end gap-1 mt-1 text-[8px] opacity-75">
-                                    <span>{msg.timestamp}</span>
-                                  </div>
+                                  {!isActiveCommJoined && activeComm.type === 'custom' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setJoinedCommunityIds(prev => [...prev, activeComm.id]);
+                                        onShowToast(`Joined "${activeComm.name}"!`);
+                                        playAudioFeedback(600, 0.08, 'sine');
+                                      }}
+                                      className="text-[9px] font-bold text-white bg-sky-600 hover:bg-sky-700 px-2.5 py-1 rounded-full transition-colors"
+                                    >
+                                      Join
+                                    </button>
+                                  )}
                                 </div>
                               </div>
-                            ))}
-                            
-                            <div ref={chatEndRef} />
-                          </div>
+                              <p className="text-[9.5px] text-slate-400 mt-0.5 truncate leading-normal">
+                                {activeComm.description}
+                              </p>
+                            </div>
 
-                          {/* Chat Input Bar */}
-                          <div className="p-2 border-t border-slate-200 bg-white shrink-0">
-                            {activeComm.type === 'municipal' ? (
-                              <div className="py-2.5 px-3 bg-amber-50/70 border border-amber-200/50 rounded-xl text-center text-[10px] font-medium text-amber-800 leading-tight flex items-center justify-center gap-1.5">
-                                <span>🏛️</span>
-                                <span>Official Announcement Channel: Citizens cannot publish messages to this feed.</span>
+                            {/* Messages Scroll Area */}
+                            <div className="flex-1 overflow-y-auto p-4 space-y-3.5 min-h-0">
+                              {/* Encryption/Sync banner */}
+                              <div className="text-center py-1.5 text-[9px] text-slate-400 font-mono tracking-wide border-b border-slate-100 mb-2 flex items-center justify-center gap-1">
+                                <span>🔒</span>
+                                <span>Real-time citizen ledger synced securely via CleanAir SOMA node</span>
                               </div>
-                            ) : !isActiveCommJoined ? (
-                              <div className="py-2 px-3 bg-sky-50 border border-sky-200/50 rounded-xl text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setJoinedCommunityIds(prev => [...prev, activeComm.id]);
-                                    onShowToast(`Joined "${activeComm.name}"!`);
-                                    playAudioFeedback(600, 0.08, 'sine');
-                                  }}
-                                  className="text-[10px] font-bold text-sky-700 hover:underline"
+
+                              {activeCommunityMessages.map((msg) => (
+                                <div
+                                  key={msg.id}
+                                  className={`flex flex-col max-w-[85%] ${
+                                    msg.isUser ? 'ml-auto items-end' : 'mr-auto items-start'
+                                  }`}
                                 >
-                                  👉 Click here to join this community and participate in discussions
-                                </button>
-                              </div>
-                            ) : (
-                              <form
-                                onSubmit={handleSendTextMessage}
-                                className="flex items-center gap-2"
-                              >
-                                <input
-                                  type="text"
-                                  value={textInput}
-                                  onChange={(e) => setTextInput(e.target.value)}
-                                  placeholder={`Post inside ${activeComm.name}...`}
-                                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-800 font-sans"
-                                />
-                                <button
-                                  type="submit"
-                                  className="p-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl transition-colors shrink-0 cursor-pointer active:scale-95"
+                                  {/* Sender Info label */}
+                                  {!msg.isUser && (
+                                    <span className="text-[9px] font-mono text-slate-400 font-semibold mb-0.5 ml-1 flex items-center gap-1">
+                                      <span>{msg.avatar}</span>
+                                      <span>{msg.senderName}</span>
+                                      {msg.city && <span className="opacity-60">({msg.city})</span>}
+                                    </span>
+                                  )}
+
+                                  {/* Text Message Bubble */}
+                                  <div
+                                    className={`rounded-2xl px-3 py-2 text-xs shadow-sm ${
+                                      msg.isUser
+                                        ? 'bg-sky-600 text-white rounded-tr-none'
+                                        : 'bg-white text-slate-800 rounded-tl-none border border-slate-200/60'
+                                    }`}
+                                  >
+                                    {/* Render attachments if they exist */}
+                                    {msg.imageUrl && (
+                                      <div className="rounded-lg overflow-hidden mb-2 border border-black/10 max-w-[190px] aspect-video">
+                                        <img
+                                          src={msg.imageUrl}
+                                          alt="Evidence"
+                                          className="w-full h-full object-cover"
+                                          referrerPolicy="no-referrer"
+                                        />
+                                      </div>
+                                    )}
+
+                                    <p className="leading-relaxed leading-tight text-[11px] break-words">
+                                      {msg.text}
+                                    </p>
+
+                                    <div className="flex items-center justify-end gap-1 mt-1 text-[8px] opacity-75">
+                                      <span>{msg.timestamp}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                              
+                              <div ref={chatEndRef} />
+                            </div>
+
+                            {/* Chat Input Bar */}
+                            <div className="p-2 border-t border-slate-200 bg-white shrink-0">
+                              {activeComm.type === 'municipal' ? (
+                                <div className="py-2.5 px-3 bg-amber-50/70 border border-amber-200/50 rounded-xl text-center text-[10px] font-medium text-amber-800 leading-tight flex items-center justify-center gap-1.5">
+                                  <span>🏛️</span>
+                                  <span>Official Announcement Channel: Citizens cannot publish messages to this feed.</span>
+                                </div>
+                              ) : !isActiveCommJoined ? (
+                                <div className="py-2 px-3 bg-sky-50 border border-sky-200/50 rounded-xl text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setJoinedCommunityIds(prev => [...prev, activeComm.id]);
+                                      onShowToast(`Joined "${activeComm.name}"!`);
+                                      playAudioFeedback(600, 0.08, 'sine');
+                                    }}
+                                    className="text-[10px] font-bold text-sky-700 hover:underline"
+                                  >
+                                    👉 Click here to join this community and participate in discussions
+                                  </button>
+                                </div>
+                              ) : (
+                                <form
+                                  onSubmit={handleSendTextMessage}
+                                  className="flex items-center gap-2"
                                 >
-                                  <Send className="w-3.5 h-3.5 text-white" />
-                                </button>
-                              </form>
-                            )}
+                                  <input
+                                    type="text"
+                                    value={textInput}
+                                    onChange={(e) => setTextInput(e.target.value)}
+                                    placeholder={`Post inside ${activeComm.name}...`}
+                                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-800 font-sans"
+                                  />
+                                  <button
+                                    type="submit"
+                                    className="p-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl transition-colors shrink-0 cursor-pointer active:scale-95"
+                                  >
+                                    <Send className="w-3.5 h-3.5 text-white" />
+                                  </button>
+                                </form>
+                              )}
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </motion.div>
                     );
                   })()}
