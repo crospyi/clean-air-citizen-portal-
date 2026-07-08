@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // User Profile Rules
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId);
+    }
+
+    // Hazard Reports Rules
+    match /reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Daily Attendance Check-ins Rules
+    match /checkins/{checkinId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Communities Rules
+    match /communities/{communityId} {
+      allow read: if isAuthenticated();
+      // Only allow custom communities to be created by citizens, matching their creator ID
+      allow create: if isAuthenticated() && 
+                    request.resource.data.type == 'custom' && 
+                    request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
+    }
+
+    // Community Messages Rules
+    match /community_messages/{messageId} {
+      allow read: if isAuthenticated();
+      // Block citizens from posting to the official municipal_updates group
+      allow create: if isAuthenticated() && 
+                    request.resource.data.communityId != 'municipal_updates' && 
+                    request.resource.data.senderId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.senderId == request.auth.uid;
+    }
+  }
+}

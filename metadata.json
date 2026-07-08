@@ -1,0 +1,6 @@
+{
+  "name": "Clean Air Citizen Portal & Control Center",
+  "description": "An interactive clean air monitoring system linking a citizen reporting mobile app and a municipal command center using real-time synchronization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

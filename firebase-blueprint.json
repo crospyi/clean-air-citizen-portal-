@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Represents a citizen registered in CleanAir India",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "state": { "type": "string" },
+        "city": { "type": "string" },
+        "registered": { "type": "boolean" },
+        "avatar": { "type": "string" }
+      },
+      "required": ["uid", "name", "state", "city"]
+    },
+    "Report": {
+      "title": "Air Quality Report",
+      "description": "A hazard or pollution report submitted by a citizen",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "state": { "type": "string" },
+        "city": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "severity": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "upvotes": { "type": "number" },
+        "downvotes": { "type": "number" },
+        "voters": { "type": "array" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "reporterName", "state", "city", "description", "category", "severity"]
+    },
+    "Checkin": {
+      "title": "Attendance Check-in",
+      "description": "Daily green attendance check-in",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["userId", "date", "timestamp"]
+    },
+    "Community": {
+      "title": "Citizen Community Group",
+      "description": "A community discussion channel created by a state, city, or user",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["municipal", "state", "city", "custom"] },
+        "state": { "type": "string" },
+        "city": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "description", "type", "createdAt"]
+    },
+    "CommunityMessage": {
+      "title": "Community Chat Message",
+      "description": "A chat message sent inside a localized or custom community channel",
+      "type": "object",
+      "properties": {
+        "communityId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderId": { "type": "string" },
+        "state": { "type": "string" },
+        "city": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "avatar": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["communityId", "senderName", "senderId", "text", "timestamp", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores individual user profile data"
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Air pollution reports submitted by citizens"
+    },
+    "/checkins/{checkinId}": {
+      "schema": "Checkin",
+      "description": "Daily user eco-attendance logs"
+    },
+    "/communities/{communityId}": {
+      "schema": "Community",
+      "description": "Custom citizen-run discussion channels"
+    },
+    "/community_messages/{messageId}": {
+      "schema": "CommunityMessage",
+      "description": "All chat messages for communities"
+    }
+  }
+}
