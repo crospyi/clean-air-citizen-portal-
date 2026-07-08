@@ -434,8 +434,8 @@ export default function AqiMap({
       if (report.category) {
         const seedLat = Math.sin(index + 3.5) * 0.009;
         const seedLon = Math.cos(index + 1.2) * 0.009;
-        const reportLat = selectedCityCoords.lat + seedLat;
-        const reportLon = selectedCityCoords.lon + seedLon;
+        const reportLat = (report.lat !== undefined && report.lat !== null) ? report.lat : (selectedCityCoords.lat + seedLat);
+        const reportLon = (report.lon !== undefined && report.lon !== null) ? report.lon : (selectedCityCoords.lon + seedLon);
 
         const hazardIcon = L.divIcon({
           html: getHazardMarkerHtml(report.category),
