@@ -2889,6 +2889,37 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
   const [textInput, setTextInput] = useState<string>('');
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
+  // Real-time SOMA Leaderboard State
+  const [realUsers, setRealUsers] = useState<any[]>([]);
+
+  // Sync SOMA Leaderboard with real users from Firestore
+  useEffect(() => {
+    const q = query(
+      collection(db, 'users'),
+      orderBy('points', 'desc'),
+      limit(10)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const usersList: any[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.registered) {
+          usersList.push({
+            uid: docSnap.id,
+            name: data.name || 'Anonymous Citizen',
+            points: data.points || 0,
+            reportsCount: data.reportsCount || 0,
+            avatar: data.avatar || '🧑🏽‍💼'
+          });
+        }
+      });
+      setRealUsers(usersList);
+    }, (err) => {
+      console.warn("Error fetching leaderboard users from Firestore:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Multi-Community State & Real-time Sync
   const [activeCommunityId, setActiveCommunityId] = useState<string>('municipal_updates');
   const [showChatWindow, setShowChatWindow] = useState<boolean>(false);
@@ -5075,17 +5106,64 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
                           <span className="text-[8px] font-mono text-slate-400 font-medium">Rankings</span>
                         </div>
                         <div className="space-y-1.5">
-                          {[
-                            { rank: 1, name: 'Kiran Joshi', badge: '🛡️ Eco Guardian', points: 750, isSelf: false },
-                            { rank: 2, name: 'Devendra Gupta', badge: '🏆 Decarbon Champion', points: 550, isSelf: false },
-                            { rank: 3, name: 'Sneha Patel', badge: '🔬 Aerosol Analyst', points: 350, isSelf: false },
-                            { rank: 4, name: `${profile.name} (You)`, badge: userReportsCount >= 3 ? '🕵️‍♂️ Smog Spotter' : '🥈 Clean Air Recruit', points: userPoints, isSelf: true },
-                            { rank: 5, name: 'Rajesh Khanna', badge: '🥈 Clean Air Recruit', points: 100, isSelf: false }
-                          ]
-                            .sort((a, b) => b.points - a.points)
-                            .map((leader, idx) => (
+                          {(() => {
+                            // Mock fallbacks to ensure the leaderboard is populated
+                            const fallbackMocks = [
+                              { uid: 'mock-1', name: 'Kiran Joshi', badge: '🛡️ Eco Guardian', points: 750, isSelf: false, avatar: '👩🏽‍🌾' },
+                              { uid: 'mock-2', name: 'Devendra Gupta', badge: '🏆 Decarbon Champion', points: 550, isSelf: false, avatar: '👨🏽‍⚕️' },
+                              { uid: 'mock-3', name: 'Sneha Patel', badge: '🔬 Aerosol Analyst', points: 350, isSelf: false, avatar: '👩🏽‍🔬' },
+                              { uid: 'mock-4', name: 'Rajesh Khanna', badge: '🥈 Clean Air Recruit', points: 100, isSelf: false, avatar: '👨🏽‍💻' }
+                            ];
+
+                            // Process real users with their calculated badge
+                            const processedReal = realUsers.map((u) => {
+                              const count = u.reportsCount || 0;
+                              const badge = count >= 12 ? '🛡️ Eco Guardian' :
+                                            count >= 8 ? '🏆 Decarbon Champion' :
+                                            count >= 5 ? '🔬 Aerosol Analyst' :
+                                            count >= 3 ? '🕵️‍♂️ Smog Spotter' : '🥈 Clean Air Recruit';
+                              return {
+                                uid: u.uid,
+                                name: u.name,
+                                badge,
+                                points: u.points,
+                                isSelf: fbUser ? u.uid === fbUser.uid : false,
+                                avatar: u.avatar || '🧑🏽‍💼'
+                              };
+                            });
+
+                            // Add current user if they are registered but not in processedReal
+                            const isCurrentUserInReal = processedReal.some(u => u.isSelf);
+                            if (!isCurrentUserInReal && fbUser && profile.registered) {
+                              const selfBadge = userReportsCount >= 12 ? '🛡️ Eco Guardian' :
+                                                userReportsCount >= 8 ? '🏆 Decarbon Champion' :
+                                                userReportsCount >= 5 ? '🔬 Aerosol Analyst' :
+                                                userReportsCount >= 3 ? '🕵️‍♂️ Smog Spotter' :
+                                                userReportsCount >= 1 ? '🥈 Clean Air Recruit' : '🥚 Rookie';
+                              processedReal.push({
+                                uid: fbUser.uid,
+                                name: `${profile.name} (You)`,
+                                badge: selfBadge,
+                                points: userPoints,
+                                isSelf: true,
+                                avatar: profile.avatar || '🧑🏽‍💼'
+                              });
+                            }
+
+                            // Combine and filter out duplicates
+                            const combined = [...processedReal];
+                            fallbackMocks.forEach((mock) => {
+                              if (!combined.some(u => u.name.split(' (')[0] === mock.name)) {
+                                combined.push(mock);
+                              }
+                            });
+
+                            // Sort by points descending and take top 5
+                            const sortedLeaders = combined.sort((a, b) => b.points - a.points).slice(0, 5);
+
+                            return sortedLeaders.map((leader, idx) => (
                               <div 
-                                key={idx} 
+                                key={leader.uid || idx} 
                                 className={`flex items-center justify-between p-1.5 px-2 rounded-lg text-[9.5px] ${
                                   leader.isSelf 
                                     ? 'bg-sky-50 border border-sky-100 font-bold' 
@@ -5100,14 +5178,18 @@ export default function CitizenPortal({ onShowToast }: CitizenPortalProps) {
                                   }`}>
                                     {idx + 1}
                                   </span>
-                                  <div className="truncate leading-tight">
-                                    <span className="text-slate-800 font-semibold block truncate">{leader.name}</span>
-                                    <span className="text-[7px] text-slate-400 block font-sans truncate">{leader.badge}</span>
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[11px] shrink-0 select-none">{leader.avatar || '🧑🏽‍💼'}</span>
+                                    <div className="truncate leading-tight">
+                                      <span className="text-slate-800 font-semibold block truncate">{leader.name}</span>
+                                      <span className="text-[7px] text-slate-400 block font-sans truncate">{leader.badge}</span>
+                                    </div>
                                   </div>
                                 </div>
                                 <span className="font-mono font-bold text-slate-700">{leader.points} PTS</span>
                               </div>
-                            ))}
+                            ));
+                          })()}
                         </div>
                       </div>
 
