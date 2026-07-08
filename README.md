@@ -2,7 +2,8 @@
 
 A modern React web application for citizen engagement, air quality reporting, and community discussions. It empowers citizens to track local environmental conditions, report hazards, log daily eco-friendly activities, and participate in localized discussion forums.
 
-You can view the live application here: https://crospyi.github.io/clean-air-citizen-portal-/
+- **Live Application**: https://crospyi.github.io/clean-air-citizen-portal-/
+- **Command Centre Dashboard**: https://crospyi.github.io/CLEANAIR-CLEAR-STREETS-COMMAND-CENTRE/
 
 ## Features
 
